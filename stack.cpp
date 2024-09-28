@@ -64,8 +64,8 @@ int stack_push(stack_t* stk, stack_elem_t x)
             printf("ERROR: unable to reallocate memory for data\n");
             return 0;
         }
-        stk->size++;
         *(stk->data + stk->size) = x;
+        stk->size++;
     }
     return 1;
 }
