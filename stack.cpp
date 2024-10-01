@@ -1,20 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "stack.h"
 
 const int START_CAPACITY = 4;
 
-int stack_init(struct stack_t* stk)
+int stack_init(struct stack_t* stk, size_t elem_size)
 {
     if (stack_error(stk) == 1)
     {
         printf("ERROR: stk is a null pointer");
         return 1;
     }
-    stk->data = (stack_elem_t*)calloc(sizeof(stack_elem_t),
-                START_CAPACITY);
+    stk->data = calloc(elem_size, START_CAPACITY);
     stk->capacity = START_CAPACITY;
     stk->size = 0;
+    stk->elem_size = elem_size;
     return 0;
 }
 
@@ -37,19 +38,25 @@ int stack_printf(stack_t* stk)
     printf("size = %d; &size = %p\n", stk->size, &(stk->size));
     printf("capasity = %d; &capasity = %p\n",
             stk->capacity, &(stk->capacity));
-    printf("&data = %p\n", &stk->data);
+    printf("elem_size = %lu, &elem_size = %p\n",
+            stk->elem_size, &stk->elem_size);
+    printf("data = %p, &data = %p\n", stk->data, &stk->data);
     for (int i = 0; i < stk->capacity; i++)
     {
         if (i < stk->size)
-            printf("*%d = %f\n", i, *(stk->data + i));
+            printf("*%d = %f\n", i,
+                    *(double*)((char*)stk->data +
+                    (size_t)i*stk->elem_size));
         else
-            printf(" %d = %f\n", i, *(stk->data + i));
+            printf(" %d = %f\n", i,
+                    *(double*)((char*)stk->data +
+                    (size_t)i*stk->elem_size));
     }
     printf("\n");
     return 0;
 }
 
-int stack_push(stack_t* stk, stack_elem_t x)
+int stack_push(stack_t* stk, void* p)
 {
     STACK_ASSERT(stk);
     if (int err = stack_error(stk))
@@ -57,31 +64,37 @@ int stack_push(stack_t* stk, stack_elem_t x)
     if (stk->size + 1 > stk->capacity)
     {
         stk->capacity *= 2;
-        stk->data = (stack_elem_t*)realloc(stk->data,
-                    (size_t)stk->capacity*sizeof(stack_elem_t));
+        stk->data = realloc(stk->data,
+                    (size_t)stk->capacity*stk->elem_size);
         if (stk->data == NULL)
         {
-            printf("ERROR: unable to reallocate memory for data\n");
+            printf("ERROR: unable to reallocate "
+                   "memory for data\n");
             return 0;
         }
     }
-    *(stk->data + stk->size) = x;
+    memcpy((char*)stk->data +
+           (size_t)(stk->size)*(stk->elem_size),
+           p, stk->elem_size);
     stk->size++;
     return 1;
 }
 
-int stack_pop(stack_t* stk, stack_elem_t* x)
+int stack_pop(stack_t* stk, void* p)
 {
     STACK_ASSERT(stk);
     if (int err = stack_error(stk))
         return err;
-    *x = *(stk->data + stk->size - 1);
+    memcpy(p, (char*)stk->data +
+          (size_t)(stk->size - 1)*(stk->elem_size),
+          stk->elem_size);
     stk->size--;
-    if (stk->size <= stk->capacity/4 && stk->capacity >= 2*START_CAPACITY)
+    if (stk->size <= stk->capacity/4 &&
+        stk->capacity >= 2*START_CAPACITY)
     {
         stk->capacity /= 2;
-        stk->data = (stack_elem_t*)realloc(stk->data,
-                    (size_t)stk->capacity*sizeof(stack_elem_t));
+        stk->data = realloc(stk->data,
+                    (size_t)stk->capacity*stk->elem_size);
     }
     return 1;
 }
