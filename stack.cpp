@@ -1,22 +1,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "stack.h"
 
 const int START_CAPACITY = 4;
 
-int stack_init(struct stack_t* stk, size_t elem_size)
+struct stack_t {
+
+    size_t elem_size;
+    void* data;
+    int size;
+    int capacity;
+};
+
+struct stack_t* stack_init(size_t elem_size)
 {
-    if (stack_error(stk) == 1)
+    struct stack_t* stk = (struct stack_t*)calloc(1, sizeof(struct stack_t));
+    if (stk == NULL)
     {
-        printf("ERROR: stk is a null pointer");
-        return 1;
+        printf("ERROR: enable to allocate memory for"
+               "struct stack_t: %s\n", strerror(errno));
+        return NULL;
     }
     stk->data = calloc(elem_size, START_CAPACITY);
+    if (stk == NULL)
+    {
+        printf("ERROR: enable to allocate memory"
+               "for data: %s\n", strerror(errno));
+        return NULL;
+    }
     stk->capacity = START_CAPACITY;
     stk->size = 0;
     stk->elem_size = elem_size;
-    return 0;
+    return stk;
 }
 
 int stack_destroy(stack_t* stk)
@@ -25,8 +42,7 @@ int stack_destroy(stack_t* stk)
     if (int err = stack_error(stk))
         return err;
     free(stk->data);
-    stk->capacity = 0;
-    stk->size = 0;
+    free(stk);
     return 0;
 }
 

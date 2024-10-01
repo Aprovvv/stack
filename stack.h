@@ -13,17 +13,12 @@
 #define STACK_ASSERT(stk)
 #endif
 
-struct stack_t {
-
-    size_t elem_size;
-    void* data;
-    int size;
-    int capacity;
-};
+struct stack_t;
 
 void stack_assert(struct stack_t* stk, const char* file, int line);
 
-int stack_init(struct stack_t* stk, size_t elem_size);
+struct stack_t* stack_init(size_t elem_size);
+
 int stack_push(stack_t* stk, void* x);
 int stack_pop(stack_t* stk, void* x);
 int stack_error(struct stack_t* stk);
