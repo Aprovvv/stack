@@ -2,45 +2,38 @@
 #include <stdlib.h>
 #include "stack.h"
 
-struct stack_t {
-    stack_elem_t* data;
-    int size;
-    int capacity;
-};
-
-const int START_CAPASITY = 4;
+const int START_CAPACITY = 4;
 
 int stack_init(struct stack_t* stk)
 {
-    if (stk == NULL)
+    if (stack_error(stk) == 1)
     {
-        printf("ERROR: argument is a NULL pointer\n");
+        printf("ERROR: stk is a null pointer");
         return 1;
     }
     stk->data = (stack_elem_t*)calloc(sizeof(stack_elem_t),
-                START_CAPASITY);
-    if (stk->data == NULL)
-    {
-        printf("ERROR: unable to allocate memory "
-        "for data\n");
-        return 1;
-    }
-    stk->capacity = START_CAPASITY;
+                START_CAPACITY);
+    stk->capacity = START_CAPACITY;
     stk->size = 0;
     return 0;
 }
 
-void stack_destroy(stack_t* stk)
+int stack_destroy(stack_t* stk)
 {
     STACK_ASSERT(stk);
+    if (int err = stack_error(stk))
+        return err;
     free(stk->data);
     stk->capacity = 0;
     stk->size = 0;
+    return 0;
 }
 
-void stack_printf(stack_t* stk)
+int stack_printf(stack_t* stk)
 {
     STACK_ASSERT(stk);
+    if (int err = stack_error(stk))
+        return err;
     printf("size = %d; &size = %p\n", stk->size, &(stk->size));
     printf("capasity = %d; &capasity = %p\n",
             stk->capacity, &(stk->capacity));
@@ -53,11 +46,14 @@ void stack_printf(stack_t* stk)
             printf(" %d = %f\n", i, *(stk->data + i));
     }
     printf("\n");
+    return 0;
 }
 
 int stack_push(stack_t* stk, stack_elem_t x)
 {
     STACK_ASSERT(stk);
+    if (int err = stack_error(stk))
+        return err;
     if (stk->size + 1 > stk->capacity)
     {
         stk->capacity *= 2;
@@ -77,9 +73,11 @@ int stack_push(stack_t* stk, stack_elem_t x)
 int stack_pop(stack_t* stk, stack_elem_t* x)
 {
     STACK_ASSERT(stk);
+    if (int err = stack_error(stk))
+        return err;
     *x = *(stk->data + stk->size - 1);
     stk->size--;
-    if (stk->size <= stk->capacity/4 && stk->capacity >= 2*START_CAPASITY)
+    if (stk->size <= stk->capacity/4 && stk->capacity >= 2*START_CAPACITY)
     {
         stk->capacity /= 2;
         stk->data = (stack_elem_t*)realloc(stk->data,
@@ -109,6 +107,7 @@ void stack_assert(struct stack_t* stk, const char* file, int line)
     case 3:
         printf("ERROR: stk->size < 0 "
                "in %s:%d\n", file, line);
+        break;
     case 4:
         printf("ERROR: capacity < size "
                "in %s:%d\n", file, line);

@@ -4,7 +4,7 @@
 
 int main()
 {
-    struct stack_t my_stack = {};
+    struct stack_t my_stack = {0};
     if(0 != stack_init(&my_stack))
         return EXIT_FAILURE;
     stack_printf(&my_stack);
