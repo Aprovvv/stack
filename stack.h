@@ -17,6 +17,8 @@ struct stack_t;
 
 void stack_assert(struct stack_t* stk, const char* file, int line);
 
+void* resize(void* ptr, int new_capacity, int old_capacity, size_t elem_size);
+
 struct stack_t* stack_init(size_t elem_size);
 
 int stack_push(stack_t* stk, void* x);

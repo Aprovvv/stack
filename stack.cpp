@@ -5,6 +5,7 @@
 #include "stack.h"
 
 const int START_CAPACITY = 4;
+const unsigned long CANARY = 0XFEE1DEAD;
 
 struct stack_t {
     unsigned long left_str_protect;
@@ -17,7 +18,8 @@ struct stack_t {
 
 struct stack_t* stack_init(size_t elem_size)
 {
-    struct stack_t* stk = (struct stack_t*)calloc(1, sizeof(struct stack_t));
+    struct stack_t* stk =
+        (struct stack_t*)calloc(1, sizeof(struct stack_t));
     if (stk == NULL)
     {
         printf("ERROR: enable to allocate memory for"
@@ -32,13 +34,14 @@ struct stack_t* stack_init(size_t elem_size)
                "for data: %s\n", strerror(errno));
         return NULL;
     }
-    stk->left_str_protect = 0xFEE1DEAD;
-    stk->right_str_protect = 0xFEE1DEAD;
+    stk->left_str_protect = CANARY;
+    stk->right_str_protect = CANARY;
     stk->capacity = START_CAPACITY;
     stk->size = 0;
     stk->elem_size = elem_size;
-    *((unsigned long*)stk->data - 1) = 0xFEE1DEAD;
-    *((unsigned long*)stk->data + stk->size + 1) = 0xFEE1DEAD;
+    *((unsigned long*)stk->data - 1) = CANARY;
+    *(unsigned long*)((char*)stk->data +
+                      stk->elem_size*START_CAPACITY) = CANARY;
     return stk;
 }
 
@@ -57,10 +60,16 @@ int stack_printf(stack_t* stk)
     STACK_ASSERT(stk);
     if (int err = stack_error(stk))
         return err;
+    unsigned long left_canary =
+        *((unsigned long*)stk->data - 1);
+    unsigned long right_canary =
+        *((unsigned long*)((char*)stk->data +
+                            stk->elem_size*stk->capacity));
+
     printf("right_str_protect = %#lX\n", stk->right_str_protect);
     printf("left_str_protect = %#lX\n", stk->left_str_protect);
-    printf("right_data_protect = %#lX\n", *((unsigned long*)stk->data - 1));
-    printf("left_data_protect = %#lX\n", *((unsigned long*)stk->data + stk->size + 1));
+    printf("left_data_protect = %#lX\n", left_canary);
+    printf("right_data_protect = %#lX\n", right_canary);
     printf("size = %d; &size = %p\n", stk->size, &(stk->size));
     printf("capasity = %d; &capasity = %p\n",
             stk->capacity, &(stk->capacity));
@@ -89,9 +98,11 @@ int stack_push(stack_t* stk, void* p)
         return err;
     if (stk->size + 1 > stk->capacity)
     {
+        stk->data = resize(stk->data,
+                           stk->capacity*2,
+                           stk->capacity,
+                           stk->elem_size);
         stk->capacity *= 2;
-        stk->data = (long*)realloc((long*)stk->data - 1,
-                    (size_t)stk->capacity*stk->elem_size + 2*sizeof(long)) + 1;
         if (stk->data == NULL)
         {
             printf("ERROR: unable to reallocate "
@@ -118,11 +129,33 @@ int stack_pop(stack_t* stk, void* p)
     if (stk->size <= stk->capacity/4 &&
         stk->capacity >= 2*START_CAPACITY)
     {
+        stk->data = resize(stk->data,
+                           stk->capacity/2,
+                           stk->capacity,
+                           stk->elem_size);
         stk->capacity /= 2;
-        stk->data = (long*)realloc((long*)stk->data - 1,
-                    (size_t)stk->capacity*stk->elem_size + 2*sizeof(long)) + 1;
     }
     return 1;
+}
+
+void* resize(void* ptr,
+             int new_capacity,
+             int old_capacity,
+             size_t elem_size)
+{
+    ptr = (long*)ptr - 1;
+    ptr = realloc(ptr,
+                 (size_t)(new_capacity*elem_size) +
+                          2*sizeof(long));
+    if (ptr == NULL)
+    {
+        printf("ERROR: unable to reallocate "
+               "memory for data: %s\n", strerror(errno));
+    }
+    *(unsigned long*)((char*)ptr +
+                       sizeof(long) +
+                       elem_size*new_capacity) = CANARY;
+    return (long*)ptr + 1;
 }
 
 void stack_assert(struct stack_t* stk, const char* file, int line)
@@ -138,30 +171,43 @@ void stack_assert(struct stack_t* stk, const char* file, int line)
     case 1:
         printf("ERROR: stk is a null pointer "
                "in %s:%d\n", file, line);
-        break;
+        abort();
     case 2:
         printf("ERROR: stk->data is a null pointer "
                "in %s:%d\n", file, line);
-        break;
+        abort();
     case 3:
         printf("ERROR: stk->size < 0 "
                "in %s:%d\n", file, line);
-        break;
+        abort();
     case 4:
         printf("ERROR: capacity < size "
                "in %s:%d\n", file, line);
-        break;
+        abort();
     case 5:
         printf("ERROR: left_str_protect = %lX "
                "in %s:%d\n", stk->left_str_protect, file, line);
-        break;
+        abort();
     case 6:
         printf("ERROR: right_str_protect = %lX "
                "in %s:%d\n", stk->right_str_protect, file, line);
-        break;
+        abort();
+    case 7:
+        printf("ERROR: right_data_protect = %lX "
+               "in %s:%d\n",
+               *((unsigned long*)stk->data - 1),
+               file, line);
+        abort();
+    case 8:
+        printf("ERROR: right_data_protect = %lX "
+               "in %s:%d\n",
+               *((unsigned long*)((char*)stk->data +
+                                   stk->elem_size*stk->capacity)),
+               file, line);
+        abort();
     default:
         printf("UNDEFINED ERROR\n");
-        break;
+        abort();
     }
 }
 
@@ -169,12 +215,21 @@ int stack_error(struct stack_t* stk)
 {
     if (stk == NULL)
         return 1;
-    if (stk->left_str_protect != 0xFEE1DEAD)
+    if (stk->left_str_protect != CANARY)
         return 5;
-    if (stk->right_str_protect != 0xFEE1DEAD)
+    if (stk->right_str_protect != CANARY)
         return 6;
     if (stk->data == NULL)
         return 2;
+    unsigned long left_canary =
+        *((unsigned long*)stk->data - 1);
+    unsigned long right_canary =
+        *((unsigned long*)((char*)stk->data +
+                            stk->elem_size*stk->capacity));
+    if (left_canary != CANARY)
+        return 7;
+    if (right_canary != CANARY)
+        return 8;
     if (stk->size < 0)
         return 3;
     if (stk->capacity < stk->size)
