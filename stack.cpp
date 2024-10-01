@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "stack.h"
 
-const int START_CAPASITY = 5;
+const int START_CAPASITY = 4;
 
 int stack_init(struct stack_t* stk)
 {
@@ -26,6 +26,7 @@ int stack_init(struct stack_t* stk)
 
 void stack_destroy(stack_t* stk)
 {
+    STACK_ASSERT(stk);
     free(stk->data);
     stk->capacity = 0;
     stk->size = 0;
@@ -49,12 +50,8 @@ void stack_printf(stack_t* stk)
 
 int stack_push(stack_t* stk, stack_elem_t x)
 {
-    if (stk->size + 1 <= stk->capacity)
-    {
-        *(stk->data + stk->size) = x;
-        stk->size++;
-    }
-    else
+    STACK_ASSERT(stk);
+    if (stk->size + 1 > stk->capacity)
     {
         stk->capacity *= 2;
         stk->data = (stack_elem_t*)realloc(stk->data,
@@ -64,14 +61,15 @@ int stack_push(stack_t* stk, stack_elem_t x)
             printf("ERROR: unable to reallocate memory for data\n");
             return 0;
         }
-        *(stk->data + stk->size) = x;
-        stk->size++;
     }
+    *(stk->data + stk->size) = x;
+    stk->size++;
     return 1;
 }
 
 int stack_pop(stack_t* stk, stack_elem_t* x)
 {
+    STACK_ASSERT(stk);
     *x = *(stk->data + stk->size - 1);
     stk->size--;
     if (stk->size <= stk->capacity/4 && stk->capacity >= 2*START_CAPASITY)
@@ -95,15 +93,18 @@ void stack_assert(struct stack_t* stk, const char* file, int line)
         break;
     case 1:
         printf("ERROR: stk is a null pointer "
-               "In %s:%d\n", file, line);
+               "in %s:%d\n", file, line);
         break;
     case 2:
         printf("ERROR: stk->data is a null pointer "
-               "In %s:%d\n", file, line);
+               "in %s:%d\n", file, line);
         break;
     case 3:
         printf("ERROR: stk->size < 0 "
-               "In %s:%d\n", file, line);
+               "in %s:%d\n", file, line);
+    case 4:
+        printf("ERROR: capacity < size "
+               "in %s:%d\n", file, line);
         break;
     default:
         printf("UNDEFINED ERROR\n");
@@ -119,5 +120,7 @@ int stack_error(struct stack_t* stk)
         return 2;
     if (stk->size < 0)
         return 3;
+    if (stk->capacity < stk->size)
+        return 4;
     return 0;
 }
