@@ -2,6 +2,12 @@
 #include <stdlib.h>
 #include "stack.h"
 
+struct stack_t {
+    stack_elem_t* data;
+    int size;
+    int capacity;
+};
+
 const int START_CAPASITY = 4;
 
 int stack_init(struct stack_t* stk)
@@ -36,7 +42,8 @@ void stack_printf(stack_t* stk)
 {
     STACK_ASSERT(stk);
     printf("size = %d; &size = %p\n", stk->size, &(stk->size));
-    printf("capasity = %d; &capasity = %p\n", stk->capacity, &(stk->capacity));
+    printf("capasity = %d; &capasity = %p\n",
+            stk->capacity, &(stk->capacity));
     printf("&data = %p\n", &stk->data);
     for (int i = 0; i < stk->capacity; i++)
     {

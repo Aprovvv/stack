@@ -13,18 +13,14 @@
 
 typedef double stack_elem_t;
 
-struct stack_t {
-    stack_elem_t* data;
-    int size;
-    int capacity;
-};
-
+struct stack_t;
 
 void stack_assert(struct stack_t* stk, const char* file, int line);
-int stack_init(struct stack_t* stk);
 void stack_destroy(stack_t* stk);
 void stack_printf(stack_t* stk);
+
 int stack_push(stack_t* stk, stack_elem_t x);
 int stack_pop(stack_t* stk, stack_elem_t* x);
 int stack_error(struct stack_t* stk);
+int stack_init(struct stack_t* stk);
 #endif
