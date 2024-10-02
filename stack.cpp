@@ -20,6 +20,20 @@ struct stack_t {
     canary_t right_str_protect;
 };
 
+static void stack_assert(struct stack_t* stk, const char* file, int line);
+static void set_hash(struct stack_t* stk);
+
+static unsigned long hash(void* str, size_t size);
+
+static int data_hash_ok(struct stack_t* stk);
+static int str_hash_ok(struct stack_t* stk);
+static int stack_error(struct stack_t* stk);
+
+static void* resize(void* ptr,
+                    size_t new_capacity,
+                    size_t old_capacity,
+                    size_t elem_size);
+
 struct stack_t* stack_init(size_t elem_size)
 {
     struct stack_t* stk =
@@ -158,7 +172,7 @@ int stack_pop(stack_t* stk, void* p)
     return 0;
 }
 
-void* resize(void* ptr,
+static void* resize(void* ptr,
              size_t new_capacity,
              size_t old_capacity,
              size_t elem_size)
@@ -176,7 +190,7 @@ void* resize(void* ptr,
     return (long*)ptr + 1;
 }
 
-void stack_assert(struct stack_t* stk, const char* file, int line)
+static void stack_assert(struct stack_t* stk, const char* file, int line)
 {
     int n = stack_error(stk);
     if (n)
@@ -237,7 +251,7 @@ void stack_assert(struct stack_t* stk, const char* file, int line)
     }
 }
 
-int stack_error(struct stack_t* stk)
+static int stack_error(struct stack_t* stk)
 {
     if (stk == NULL)
         return 1;
@@ -267,7 +281,7 @@ int stack_error(struct stack_t* stk)
     return 0;
 }
 
-unsigned long hash(void* str, size_t size)
+static unsigned long hash(void* str, size_t size)
 {
     unsigned char* p = (unsigned char*)str;
     unsigned long hash = 5381;
@@ -282,7 +296,7 @@ unsigned long hash(void* str, size_t size)
     return hash;
 }
 
-void set_hash(struct stack_t* stk)
+static void set_hash(struct stack_t* stk)
 {
     stk->str_hash = hash(&stk->elem_size,
                          (char*)&stk->str_hash -
@@ -291,14 +305,14 @@ void set_hash(struct stack_t* stk)
                           stk->capacity*stk->elem_size + 2*sizeof(long));
 }
 
-int data_hash_ok(struct stack_t* stk)
+static int data_hash_ok(struct stack_t* stk)
 {
     return stk->data_hash ==
         hash((long*)stk->data - 1,
             stk->capacity*stk->elem_size + 2*sizeof(long));
 }
 
-int str_hash_ok(struct stack_t* stk)
+static int str_hash_ok(struct stack_t* stk)
 {
     return stk->str_hash ==
         hash(&stk->elem_size,
