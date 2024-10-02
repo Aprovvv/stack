@@ -21,6 +21,8 @@ void* resize(void* ptr, int new_capacity, int old_capacity, size_t elem_size);
 
 struct stack_t* stack_init(size_t elem_size);
 
+unsigned long hash(unsigned char* str, size_t size);
+
 int stack_push(stack_t* stk, void* x);
 int stack_pop(stack_t* stk, void* x);
 int stack_error(struct stack_t* stk);
