@@ -30,10 +30,11 @@ struct stack_t* stack_init(size_t elem_size)
     }
     stk->data = malloc(elem_size*START_CAPACITY + 2*sizeof(long));
     stk->data = (long*)stk->data + 1;
-    if (stk == NULL)
+    if (stk->data == NULL)
     {
         printf("ERROR: enable to allocate memory"
                "for data: %s\n", strerror(errno));
+        free(stk);
         return NULL;
     }
     stk->left_str_protect = CANARY;
@@ -44,27 +45,9 @@ struct stack_t* stack_init(size_t elem_size)
     *((unsigned long*)stk->data - 1) = CANARY;
     *(unsigned long*)((char*)stk->data +
                       stk->elem_size*START_CAPACITY) = CANARY;
-    stk->str_hash = hash((unsigned char*)&stk->elem_size,
-                         (char*)&stk->str_hash -
-                         (char*)&stk->data);
-    printf("str_hash = %lX\n", stk->str_hash);
-    stk->str_hash = hash((unsigned char*)&stk->elem_size,
-                         (char*)&stk->str_hash -
-                         (char*)&stk->data);
-    printf("str_hash = %lX\n", stk->str_hash);
+    set_hash(stk);
 
-    stk->data_hash = hash((unsigned char*)stk->data - sizeof(long),
-                          stk->capacity*stk->elem_size + 2*sizeof(long));
-    printf("data_hash = %lX\n", stk->data_hash);
-    stk->data_hash = hash((unsigned char*)stk->data - sizeof(long),
-                          stk->capacity*stk->elem_size + 2*sizeof(long));
-    printf("data_hash = %lX\n", stk->data_hash);
-
-    stk->str_hash = hash((unsigned char*)&stk->elem_size,
-                         (char*)&stk->str_hash -
-                         (char*)&stk->data);
-    printf("str_hash = %lX\n", stk->str_hash);
-
+    STACK_ASSERT(stk);
     return stk;
 }
 
@@ -80,6 +63,7 @@ int stack_destroy(stack_t* stk)
 
 int stack_printf(stack_t* stk)
 {
+    printf("\n-----------------------------------\n\n");
     STACK_ASSERT(stk);
     if (int err = stack_error(stk))
         return err;
@@ -87,18 +71,20 @@ int stack_printf(stack_t* stk)
         *((unsigned long*)stk->data - 1);
     unsigned long right_canary =
         *((unsigned long*)((char*)stk->data +
-                            (size_t)stk->capacity*stk->elem_size));
+                           (size_t)stk->capacity*stk->elem_size));
 
-    printf("right_str_protect = %#lX\n", stk->right_str_protect);
     printf("left_str_protect = %#lX\n", stk->left_str_protect);
-    printf("str_hash = %#lX\n", stk->str_hash);
-    printf("data_hash = %#lX\n", stk->data_hash);
+    printf("right_str_protect = %#lX\n", stk->right_str_protect);
     printf("left_data_protect = %#lX\n", left_canary);
     printf("right_data_protect = %#lX\n", right_canary);
+
+    printf("str_hash = %#lX\n", stk->str_hash);
+    printf("data_hash = %#lX\n\n", stk->data_hash);
+
     printf("size = %d; &size = %p\n", stk->size, &(stk->size));
     printf("capasity = %d; &capasity = %p\n",
             stk->capacity, &(stk->capacity));
-    printf("elem_size = %lu, &elem_size = %p\n",
+    printf("elem_size = %lu, &elem_size = %p\n\n",
             stk->elem_size, &stk->elem_size);
     printf("data = %p, &data = %p\n", stk->data, &stk->data);
     for (int i = 0; i < stk->capacity; i++)
@@ -112,7 +98,7 @@ int stack_printf(stack_t* stk)
                     *(double*)((char*)stk->data +
                     (size_t)i*stk->elem_size));
     }
-    printf("\n");
+    printf("\n-----------------------------------\n\n");
     return 0;
 }
 
@@ -139,7 +125,8 @@ int stack_push(stack_t* stk, void* p)
            (size_t)(stk->size)*(stk->elem_size),
            p, stk->elem_size);
     stk->size++;
-    return 1;
+    set_hash(stk);
+    return 0;
 }
 
 int stack_pop(stack_t* stk, void* p)
@@ -160,7 +147,8 @@ int stack_pop(stack_t* stk, void* p)
                            stk->elem_size);
         stk->capacity /= 2;
     }
-    return 1;
+    set_hash(stk);
+    return 0;
 }
 
 void* resize(void* ptr,
@@ -227,9 +215,17 @@ void stack_assert(struct stack_t* stk, const char* file, int line)
         printf("ERROR: right_data_protect = %lX "
                "in %s:%d\n",
                *((unsigned long*)((char*)stk->data +
-                                   (size_t)stk->capacity*stk->elem_size)),
-               file, line);
+                                  (size_t)stk->capacity*stk->elem_size)),
+                                  file, line);
         abort();
+    case 9:
+        printf("ERROR: str_hash has wrong value "
+                "in %s:%d\n", file, line);
+        break;
+    case 10:
+        printf("ERROR: data_hash has wrong value "
+                "in %s:%d\n", file, line);
+        break;
     default:
         printf("UNDEFINED ERROR\n");
         abort();
@@ -255,6 +251,10 @@ int stack_error(struct stack_t* stk)
         return 7;
     if (right_canary != CANARY)
         return 8;
+    if (!str_hash_ok(stk))
+        return 9;
+    if (!data_hash_ok(stk))
+        return 10;
     if (stk->size < 0)
         return 3;
     if (stk->capacity < stk->size)
@@ -274,4 +274,28 @@ unsigned long hash(unsigned char* str, size_t size)
     }
 
     return hash;
+}
+
+void set_hash(struct stack_t* stk)
+{
+    stk->str_hash = hash((unsigned char*)&stk->elem_size,
+                         (char*)&stk->str_hash -
+                         (char*)&stk->data);
+    stk->data_hash = hash((unsigned char*)stk->data - sizeof(long),
+                          stk->capacity*stk->elem_size + 2*sizeof(long));
+}
+
+int data_hash_ok(struct stack_t* stk)
+{
+    return stk->data_hash ==
+        hash((unsigned char*)stk->data - sizeof(long),
+            stk->capacity*stk->elem_size + 2*sizeof(long));
+}
+
+int str_hash_ok(struct stack_t* stk)
+{
+    return stk->str_hash ==
+        hash((unsigned char*)&stk->elem_size,
+             (char*)&stk->str_hash -
+             (char*)&stk->data);
 }

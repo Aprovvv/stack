@@ -16,6 +16,9 @@
 struct stack_t;
 
 void stack_assert(struct stack_t* stk, const char* file, int line);
+void set_hash(struct stack_t* stk);
+int str_hash_ok(struct stack_t* stk);
+int data_hash_ok(struct stack_t* stk);
 
 void* resize(void* ptr, int new_capacity, int old_capacity, size_t elem_size);
 
