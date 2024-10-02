@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include "stack.h"
 
 typedef double stack_elem_t;
@@ -8,13 +10,19 @@ int main()
 {
     struct stack_t* my_stack = stack_init(sizeof(stack_elem_t));
     if(NULL == my_stack)
+    {
+        fprintf(stderr, "ERROR: enable to "
+                "allocate memory: %s\n", strerror(errno));
         return EXIT_FAILURE;
+    }
     stack_printf(my_stack);
 
     for (int i = 1; i <= 10; i++)
     {
         double t = (double)i*10;
-        stack_push(my_stack, &t);
+        if(stack_push(my_stack, &t) != 0)
+            fprintf(stderr, "ERROR: unable to reallocate "
+                    "memory for data: %s\n", strerror(errno));
     }
 
     stack_printf(my_stack);
@@ -22,19 +30,34 @@ int main()
     stack_elem_t x = 4;
     for (int i = 1; i <= 4; i++)
     {
-        stack_pop(my_stack, &x);
+        if (stack_pop(my_stack, &x) != 0)
+        {
+            printf("ERROR: unable to reallocate "
+                   "memory for data: %s\n", strerror(errno));
+            return EXIT_FAILURE;
+        }
         printf("main x = %.1f\n", x);
     }
     stack_printf(my_stack);
     for (int i = 1; i <= 4; i++)
     {
-        stack_pop(my_stack, &x);
+        if (stack_pop(my_stack, &x) != 0)
+        {
+            printf("ERROR: unable to reallocate "
+                   "memory for data: %s\n", strerror(errno));
+            return EXIT_FAILURE;
+        }
         printf("main x = %.1f\n", x);
     }
     stack_printf(my_stack);
     for (int i = 1; i <= 2; i++)
     {
-        stack_pop(my_stack, &x);
+        if (stack_pop(my_stack, &x) != 0)
+        {
+            printf("ERROR: unable to reallocate "
+                   "memory for data: %s\n", strerror(errno));
+            return EXIT_FAILURE;
+        }
         printf("main x = %.1f\n", x);
     }
     stack_printf(my_stack);
