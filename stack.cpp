@@ -39,14 +39,14 @@ const int START_CAPACITY = 4;
 const canary_t CANARY = 0XFEE1DEADL;
 
 
-static void stack_assert(struct stack_t* stk, const char* file, int line);
+static void stack_assert(const struct stack_t* stk, const char* file, int line);
 static void set_hash(struct stack_t* stk);
 
-static unsigned long hash(void* str, size_t size);
+static unsigned long hash(const void* str, size_t size);
 
-static int data_hash_ok(struct stack_t* stk);
-static int str_hash_ok(struct stack_t* stk);
-static int stack_error(struct stack_t* stk);
+static int data_hash_ok(const struct stack_t* stk);
+static int str_hash_ok(const struct stack_t* stk);
+static int stack_error(const struct stack_t* stk);
 
 static void* resize(void* ptr,
                     size_t new_capacity,
@@ -60,8 +60,8 @@ struct stack_t* stack_init(size_t elem_size)
         (struct stack_t*)calloc(1, sizeof(struct stack_t));
     if (stk == NULL)
         return NULL;
-    stk->data = malloc(elem_size*START_CAPACITY + 2*sizeof(long));
-    stk->data = (long*)stk->data + 1;
+    stk->data = malloc(elem_size*START_CAPACITY + 2*sizeof(canary_t));
+    stk->data = (canary_t*)stk->data + 1;
     if (stk->data == NULL)
     {
         free(stk);
@@ -87,7 +87,7 @@ int stack_destroy(stack_t* stk)
     STACK_ASSERT(stk);
     if (int err = stack_error(stk))
         return err;
-    free((long*)stk->data - 1);
+    free((canary_t*)stk->data - 1);
     free(stk);
     return 0;
 }
@@ -171,7 +171,7 @@ int stack_pop(stack_t* stk, void* p)
           stk->elem_size);
     stk->size--;
 
-    if ((size_t)(stk->size) <= stk->capacity/4 &&
+    if (stk->size <= stk->capacity/4 &&
         stk->capacity >= 2*START_CAPACITY)
     {
         stk->data = resize(stk->data,
@@ -206,7 +206,7 @@ static void* resize(void* ptr,
     return (canary_t*)ptr + 1;
 }
 
-static void stack_assert(struct stack_t* stk, const char* file, int line)
+static void stack_assert(const struct stack_t* stk, const char* file, int line)
 {
     int n = stack_error(stk);
     canary_t curr_canary = 0;
@@ -266,7 +266,7 @@ static void stack_assert(struct stack_t* stk, const char* file, int line)
     }
 }
 
-static int stack_error(struct stack_t* stk)
+static int stack_error(const struct stack_t* stk)
 {
     if (stk == NULL)
         return STK_NULL;
@@ -295,11 +295,11 @@ static int stack_error(struct stack_t* stk)
     return NO_ERROR;
 }
 
-static unsigned long hash(void* str, size_t size)
+static unsigned long hash(const void* str, size_t size)
 {
-    unsigned char* p = (unsigned char*)str;
+    const unsigned char* p = (const unsigned char*)str;
     unsigned long hash = 5381;
-    long unsigned int c;
+    unsigned long c;
 
     for (size_t i = 0; i < size; i++)
     {
@@ -319,17 +319,17 @@ static void set_hash(struct stack_t* stk)
                           stk->capacity*stk->elem_size + 2*sizeof(canary_t));
 }
 
-static int data_hash_ok(struct stack_t* stk)
+static int data_hash_ok(const struct stack_t* stk)
 {
     return stk->data_hash ==
         hash((canary_t*)stk->data - 1,
             stk->capacity*stk->elem_size + 2*sizeof(canary_t));
 }
 
-static int str_hash_ok(struct stack_t* stk)
+static int str_hash_ok(const struct stack_t* stk)
 {
     return stk->str_hash ==
         hash(&stk->elem_size,
-             (char*)&stk->str_hash -
-             (char*)&stk->data);
+             (const char*)&stk->str_hash -
+             (const char*)&stk->data);
 }
