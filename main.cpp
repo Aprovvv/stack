@@ -6,6 +6,8 @@
 
 typedef double stack_elem_t;
 
+static int print_double(const void* ptr);
+
 int main()
 {
     struct stack_t* my_stack = stack_init(sizeof(stack_elem_t));
@@ -15,7 +17,7 @@ int main()
                 "allocate memory: %s\n", strerror(errno));
         return EXIT_FAILURE;
     }
-    stack_printf(my_stack);
+    stack_printf(my_stack, print_double);
 
     for (int i = 1; i <= 10; i++)
     {
@@ -25,7 +27,7 @@ int main()
                     "memory for data: %s\n", strerror(errno));
     }
 
-    stack_printf(my_stack);
+    stack_printf(my_stack, print_double);
 
     stack_elem_t x = 4;
     for (int i = 1; i <= 4; i++)
@@ -38,7 +40,7 @@ int main()
         }
         printf("main x = %.1f\n", x);
     }
-    stack_printf(my_stack);
+    stack_printf(my_stack, print_double);
     for (int i = 1; i <= 4; i++)
     {
         if (stack_pop(my_stack, &x) != 0)
@@ -49,7 +51,7 @@ int main()
         }
         printf("main x = %.1f\n", x);
     }
-    stack_printf(my_stack);
+    stack_printf(my_stack, print_double);
     for (int i = 1; i <= 2; i++)
     {
         if (stack_pop(my_stack, &x) != 0)
@@ -60,7 +62,13 @@ int main()
         }
         printf("main x = %.1f\n", x);
     }
-    stack_printf(my_stack);
+    stack_printf(my_stack, print_double);
 
     stack_destroy(my_stack);
+}
+
+static int print_double(const void* ptr)
+{
+    const double* double_ptr = (const double*)ptr;
+    return printf("%f", *double_ptr);
 }

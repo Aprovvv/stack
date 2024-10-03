@@ -7,7 +7,6 @@
 //FIXME условная компиляция всего что только можно
 //TODO recalloc
 //FIXME все на stderr
-//FIXME printf не на даблах
 //TODO static library
 
 typedef uint64_t canary_t;
@@ -93,7 +92,7 @@ int stack_destroy(stack_t* stk)
     return 0;
 }
 
-int stack_printf(stack_t* stk)
+int stack_printf(stack_t* stk, int(*print_func)(const void*))
 {
     printf("\n-----------------------------------\n\n");
     STACK_ASSERT(stk);
@@ -124,13 +123,17 @@ int stack_printf(stack_t* stk)
     for (size_t i = 0; i < stk->capacity; i++)
     {
         if (i < stk->size)
-            printf("*%lu = %f\n", i,
-                    *(double*)((char*)stk->data +
-                    i*stk->elem_size));
+        {
+            printf("*%lu = ", i);
+            print_func((char*)stk->data + i*stk->elem_size);
+            printf("\n");
+        }
         else
-            printf(" %lu = %f\n", i,
-                    *(double*)((char*)stk->data +
-                    i*stk->elem_size));
+        {
+            printf("%lu = ", i);
+            print_func((char*)stk->data + i*stk->elem_size);
+            printf("\n");
+        }
     }
     printf("\n-----------------------------------\n\n");
     return 0;
