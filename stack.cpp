@@ -15,7 +15,7 @@ struct stack_t {
     canary_t left_str_protect;
     size_t elem_size;
     void* data;
-    size_t size;//FIXME
+    size_t size;
     size_t capacity;
     unsigned long str_hash;
     unsigned long data_hash;
@@ -74,8 +74,9 @@ struct stack_t* stack_init(size_t elem_size)
     stk->size = 0;
     stk->elem_size = elem_size;
     *((canary_t*)stk->data - 1) = CANARY;
-    *(canary_t*)((char*)stk->data +
-                      stk->elem_size*START_CAPACITY) = CANARY;
+    memcpy((char*)stk->data + stk->elem_size*START_CAPACITY,
+           &CANARY,
+           sizeof(canary_t));
     set_hash(stk);
 
     STACK_ASSERT(stk);
@@ -100,9 +101,10 @@ int stack_printf(stack_t* stk)
         return err;
     canary_t left_canary =
         *((canary_t*)stk->data - 1);
-    canary_t right_canary =
-        *((canary_t*)((char*)stk->data +
-                           (size_t)stk->capacity*stk->elem_size));
+    canary_t right_canary = 0;
+    memcpy(&right_canary,
+           (char*)stk->data + stk->capacity*stk->elem_size,
+           sizeof(canary_t));
 
     printf("left_str_protect = %#lX\n", stk->left_str_protect);
     printf("right_str_protect = %#lX\n", stk->right_str_protect);
@@ -150,7 +152,7 @@ int stack_push(stack_t* stk, void* p)
     }
 
     memcpy((char*)stk->data +
-           (size_t)(stk->size)*(stk->elem_size),
+           (stk->size)*(stk->elem_size),
            p, stk->elem_size);
     stk->size++;
     set_hash(stk);
@@ -186,23 +188,25 @@ static void* resize(void* ptr,
              size_t old_capacity,
              size_t elem_size)
 {
-    ptr = (long*)ptr - 1;
-    // FIXME: memset (strict aliasing)
-    *(canary_t*)((char*)ptr +
-                 sizeof(long) +
-                 (size_t)old_capacity*elem_size) = 0;
-    ptr = realloc(ptr, new_capacity*elem_size + 2*sizeof(long));
+    ptr = (canary_t*)ptr - 1;
+    memset((char*)ptr +
+           sizeof(canary_t) +
+           old_capacity*elem_size,
+           0, sizeof(canary_t));
+    ptr = realloc(ptr, new_capacity*elem_size + 2*sizeof(canary_t));
     if (ptr == NULL)
         return NULL;
-    *(canary_t*)((char*)ptr +
-                 sizeof(long) +
-                 (size_t)new_capacity*elem_size) = CANARY;
-    return (long*)ptr + 1;
+    memcpy((char*)ptr +
+           sizeof(canary_t) +
+           new_capacity*elem_size,
+           &CANARY, sizeof(canary_t));
+    return (canary_t*)ptr + 1;
 }
 
 static void stack_assert(struct stack_t* stk, const char* file, int line)
 {
     int n = stack_error(stk);
+    canary_t curr_canary = 0;
     if (n)
         printf("ASSERT triggered "
             "in %s:%d\n", file, line);
@@ -237,11 +241,13 @@ static void stack_assert(struct stack_t* stk, const char* file, int line)
                file, line);
         abort();
     case RIGHT_DATA_CANARY:
+        memcpy(&curr_canary,
+              (char*)stk->data +
+              stk->capacity*stk->elem_size,
+              sizeof(canary_t));
         printf("ERROR: right_data_protect = %lX "
                "in %s:%d\n",
-               *((canary_t*)((char*)stk->data +
-                                  (size_t)stk->capacity*stk->elem_size)),
-                                  file, line);
+               curr_canary, file, line);
         abort();
     case STR_HASH:
         printf("ERROR: str_hash has wrong value "
@@ -269,9 +275,10 @@ static int stack_error(struct stack_t* stk)
         return STK_DATA_NULL;
     canary_t left_canary =
         *((canary_t*)stk->data - 1);
-    canary_t right_canary =
-        *((canary_t*)((char*)stk->data +
-                      (size_t)stk->capacity*stk->elem_size));
+    canary_t right_canary = 0;
+    memcpy(&right_canary,
+           (char*)stk->data + stk->capacity*stk->elem_size,
+           sizeof(canary_t));
     if (left_canary != CANARY)
         return LEFT_DATA_CANARY;
     if (right_canary != CANARY)
@@ -305,15 +312,15 @@ static void set_hash(struct stack_t* stk)
     stk->str_hash = hash(&stk->elem_size,
                          (char*)&stk->str_hash -
                          (char*)&stk->data);
-    stk->data_hash = hash((long*)stk->data - 1,
-                          stk->capacity*stk->elem_size + 2*sizeof(long));
+    stk->data_hash = hash((canary_t*)stk->data - 1,
+                          stk->capacity*stk->elem_size + 2*sizeof(canary_t));
 }
 
 static int data_hash_ok(struct stack_t* stk)
 {
     return stk->data_hash ==
-        hash((long*)stk->data - 1,
-            stk->capacity*stk->elem_size + 2*sizeof(long));
+        hash((canary_t*)stk->data - 1,
+            stk->capacity*stk->elem_size + 2*sizeof(canary_t));
 }
 
 static int str_hash_ok(struct stack_t* stk)
