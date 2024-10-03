@@ -2,12 +2,6 @@
 #define STACK_H
 
 #ifndef NDEBUG
-#define ON_DEBUG(X) X
-#else
-#define ON_DEBUG(X)
-#endif
-
-#ifndef NDEBUG
 #define STACK_ASSERT(stk) stack_assert(stk, __FILE__, __LINE__)
 #else
 #define STACK_ASSERT(stk)

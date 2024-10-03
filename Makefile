@@ -16,10 +16,10 @@ debug_object_files/%.o: %.cpp
 	$(CC) -c $(DFLAGS) $< -o $@
 
 debug_object_files/%.o: color_print/%.cpp#добавлено из-за того, что color_print в отдельной папке
-	$(CC) -c $(DFLAGS) $< -o $@ #более умного способа я не придумал
+	$(CC) -c $(DFLAGS) $< -o $@
 
 clean:
-	rm -rf *.oDFLAGS
+	rm -rf *.o
 	rm -rf debug_object_files/*.o
 	rm -rf release_object_files/*.o
 
@@ -32,4 +32,4 @@ release_object_files/%.o: %.cpp
 	$(CC) -c $(RFLAGS) $< -o $@
 
 release_object_files/%.o: color_print/%.cpp#добавлено из-за того, что color_print в отдельной папке
-	$(CC) -c $(DFLAGS) $< -o $@ #более умного способа я не придумал
+	$(CC) -c $(RFLAGS) $< -o $@
