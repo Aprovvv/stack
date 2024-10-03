@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include "stack.h"
+#include "color_print/color_print.h"
 //FIXME условная компиляция всего что только можно
 //TODO recalloc
 //FIXME все на stderr
@@ -211,57 +212,62 @@ static void stack_assert(const struct stack_t* stk, const char* file, int line)
     int n = stack_error(stk);
     canary_t curr_canary = 0;
     if (n)
-        printf("ASSERT triggered "
-            "in %s:%d\n", file, line);
+    {
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                     "ASSERT triggered in %s:%d\n",
+                     file, line);
+    }
+
     switch (n)
     {
     case NO_ERROR:
         break;
     case STK_NULL:
-        printf("ERROR: stk is a null pointer "
-               "in %s:%d\n", file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: stk is a null pointer\n");
         abort();
     case STK_DATA_NULL:
-        printf("ERROR: stk->data is a null pointer "
-               "in %s:%d\n", file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: stk->data is a null pointer\n");
         abort();
     case CAPAC_LESS_SIZE:
-        printf("ERROR: capacity < size "
-               "in %s:%d\n", file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: capacity < size\n");
         abort();
     case LEFT_STR_CANARY:
-        printf("ERROR: left_str_protect = %lX "
-               "in %s:%d\n", stk->left_str_protect, file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: left_str_canary = %lX\n",
+                      stk->left_str_protect);
         abort();
     case RIGHT_STR_CANARY:
-        printf("ERROR: right_str_protect = %lX "
-               "in %s:%d\n", stk->right_str_protect, file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: right_str_canary = %lX\n",
+                      stk->right_str_protect);
         abort();
     case LEFT_DATA_CANARY:
-        printf("ERROR: left_data_protect = %lX "
-               "in %s:%d\n",
-               *((canary_t*)stk->data - 1),
-               file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: left_data_canary = %lX\n",
+                      *((canary_t*)stk->data - 1));
         abort();
     case RIGHT_DATA_CANARY:
         memcpy(&curr_canary,
               (char*)stk->data +
               stk->capacity*stk->elem_size,
               sizeof(canary_t));
-        printf("ERROR: right_data_protect = %lX "
-               "in %s:%d\n",
-               curr_canary, file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: right_data_canary = %lX\n",
+                      curr_canary);
         abort();
     case STR_HASH:
-        printf("ERROR: str_hash has wrong value "
-                "in %s:%d\n", file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: str_hash has wrong value\n");
         break;
     case DATA_HASH:
-        printf("ERROR: data_hash has wrong value "
-                "in %s:%d\n", file, line);
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                      "ERROR: data_hash has wrong value\n");
         break;
     default:
-        printf("UNDEFINED ERROR\n");
+        fprintf_color(stderr, CONSOLE_TEXT_RED, "UNDEFINED ERROR\n");
         abort();
     }
 }

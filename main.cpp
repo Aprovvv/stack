@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #include "stack.h"
+#include "color_print/color_print.h"
 
 typedef double stack_elem_t;
 
@@ -13,8 +14,9 @@ int main()
     struct stack_t* my_stack = stack_init(sizeof(stack_elem_t));
     if(NULL == my_stack)
     {
-        fprintf(stderr, "ERROR: enable to "
-                "allocate memory: %s\n", strerror(errno));
+        fprintf_color(stderr, CONSOLE_TEXT_RED,
+                          "ERROR: unable to allocate memory: %s\n",
+                          strerror(errno));
         return EXIT_FAILURE;
     }
     stack_printf(my_stack, print_double);
@@ -23,8 +25,13 @@ int main()
     {
         double t = (double)i*10;
         if(stack_push(my_stack, &t) != 0)
-            fprintf(stderr, "ERROR: unable to reallocate "
-                    "memory for data: %s\n", strerror(errno));
+        {
+            fprintf_color(stderr, CONSOLE_TEXT_RED,
+                          "ERROR: unable to reallocate "
+                          "memory for data: %s\n",
+                          strerror(errno));
+            return(EXIT_FAILURE);
+        }
     }
 
     stack_printf(my_stack, print_double);
@@ -34,8 +41,10 @@ int main()
     {
         if (stack_pop(my_stack, &x) != 0)
         {
-            printf("ERROR: unable to reallocate "
-                   "memory for data: %s\n", strerror(errno));
+            fprintf_color(stderr, CONSOLE_TEXT_RED,
+                          "ERROR: unable to reallocate "
+                          "memory for data: %s\n",
+                          strerror(errno));
             return EXIT_FAILURE;
         }
         printf("main x = %.1f\n", x);
@@ -45,8 +54,10 @@ int main()
     {
         if (stack_pop(my_stack, &x) != 0)
         {
-            printf("ERROR: unable to reallocate "
-                   "memory for data: %s\n", strerror(errno));
+            fprintf_color(stderr, CONSOLE_TEXT_RED,
+                          "ERROR: unable to reallocate "
+                          "memory for data: %s\n",
+                          strerror(errno));
             return EXIT_FAILURE;
         }
         printf("main x = %.1f\n", x);
@@ -56,8 +67,10 @@ int main()
     {
         if (stack_pop(my_stack, &x) != 0)
         {
-            printf("ERROR: unable to reallocate "
-                   "memory for data: %s\n", strerror(errno));
+            fprintf_color(stderr, CONSOLE_TEXT_RED,
+                          "ERROR: unable to reallocate "
+                          "memory for data: %s\n",
+                          strerror(errno));
             return EXIT_FAILURE;
         }
         printf("main x = %.1f\n", x);
