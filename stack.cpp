@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include "stack.h"
 #include "color_print/color_print.h"
-//FIXME условная компиляция всего что только можно
 //TODO recalloc
 //TODO static library
 
@@ -16,6 +15,7 @@ struct stack_t {
     canary_t left_str_protect;
 #endif
     size_t elem_size;
+    size_t start_capacity;
     void* data;
     size_t size;
     size_t capacity;
@@ -40,7 +40,8 @@ enum ERROR_CODES {
 };
 
 
-const int START_CAPACITY = 4;
+const int DEFAULT_CAPACITY = 4;
+const int REALLOC_COEF = 2;
 #ifndef NDEBUG
 const canary_t CANARY = 0XFEE1DEADL;
 #endif
@@ -64,13 +65,16 @@ static void* resize(void* ptr,
                     size_t elem_size);
 
 
-struct stack_t* stack_init(size_t elem_size)
+struct stack_t* stack_init(size_t elem_size, size_t start_capacity)
 {
     struct stack_t* stk =
         (struct stack_t*)calloc(1, sizeof(struct stack_t));
     if (stk == NULL)
         return NULL;
-    stk->data = malloc(elem_size*START_CAPACITY + 2*sizeof(canary_t));
+    size_t necessary_size = elem_size*start_capacity + 2*sizeof(canary_t);
+    if (necessary_size%8 != 0)
+        necessary_size += 8 - necessary_size%8;
+    stk->data = malloc(elem_size*start_capacity + 2*sizeof(canary_t));
 #ifndef NDEBUG
     stk->data = (canary_t*)stk->data + 1;
 #else
@@ -81,7 +85,8 @@ struct stack_t* stack_init(size_t elem_size)
         free(stk);
         return NULL;
     }
-    stk->capacity = START_CAPACITY;
+    stk->capacity = start_capacity;
+    stk->start_capacity = start_capacity;
     stk->size = 0;
     stk->elem_size = elem_size;
 
@@ -89,7 +94,7 @@ struct stack_t* stack_init(size_t elem_size)
     stk->left_str_protect = CANARY;
     stk->right_str_protect = CANARY;
     *((canary_t*)stk->data - 1) = CANARY;
-    memcpy((char*)stk->data + stk->elem_size*START_CAPACITY,
+    memcpy((char*)stk->data + stk->elem_size*start_capacity,
            &CANARY,
            sizeof(canary_t));
     set_hash(stk);
@@ -113,8 +118,8 @@ int stack_destroy(stack_t* stk)
 
 int stack_printf(stack_t* stk, int(*print_func)(const void*))
 {
-    printf("\n-----------------------------------\n\n");
-    STACK_ASSERT(stk);
+    fprintf(stderr, "%p", stk);
+    fprintf(stderr, "\n-----------------------------------\n\n");
 #ifndef NDEBUG
     if (int err = stack_error(stk))
         return err;
@@ -126,38 +131,39 @@ int stack_printf(stack_t* stk, int(*print_func)(const void*))
            (char*)stk->data + stk->capacity*stk->elem_size,
            sizeof(canary_t));
 
-    printf("left_str_canary = %#lX\n", stk->left_str_protect);
-    printf("right_str_canary = %#lX\n", stk->right_str_protect);
-    printf("left_data_canary = %#lX\n", left_canary);
-    printf("right_data_canary = %#lX\n", right_canary);
+    fprintf(stderr, "left_str_canary = %#llX\n", stk->left_str_protect);
+    fprintf(stderr, "right_str_canary = %#llX\n", stk->right_str_protect);
+    fprintf(stderr, "left_data_canary = %#llX\n", left_canary);
+    fprintf(stderr, "right_data_canary = %#llX\n", right_canary);
 
-    printf("str_hash = %#lX\n", stk->str_hash);
-    printf("data_hash = %#lX\n\n", stk->data_hash);
+    fprintf(stderr, "str_hash = %#lX\n", stk->str_hash);
+    fprintf(stderr, "data_hash = %#lX\n\n", stk->data_hash);
 #endif
 
-    printf("size = %lu; &size = %p\n", stk->size, &(stk->size));
-    printf("capasity = %lu; &capasity = %p\n",
+    fprintf(stderr, "size = %zd; &size = %p\n", stk->size, &(stk->size));
+    fprintf(stderr, "capasity = %zd; &capasity = %p\n",
             stk->capacity, &(stk->capacity));
-    printf("elem_size = %lu, &elem_size = %p\n\n",
+    fprintf(stderr, "elem_size = %zd, &elem_size = %p\n\n",
             stk->elem_size, &stk->elem_size);
-    printf("data = %p, &data = %p\n", stk->data, &stk->data);
+    fprintf(stderr, "data = %p, &data = %p\n", stk->data, &stk->data);
 
     for (size_t i = 0; i < stk->capacity; i++)
     {
         if (i < stk->size)
         {
-            printf("*%lu = ", i);
+            fprintf(stderr, "*%zd = ", i);
             print_func((char*)stk->data + i*stk->elem_size);
-            printf("\n");
+            fprintf(stderr, "\n");
         }
         else
         {
-            printf("%lu = ", i);
+            fprintf(stderr, "%zd = ", i);
             print_func((char*)stk->data + i*stk->elem_size);
-            printf("\n");
+            fprintf(stderr, "\n");
         }
     }
-    printf("\n-----------------------------------\n\n");
+    fprintf(stderr, "\n-----------------------------------\n\n");
+    STACK_ASSERT(stk);
     return 0;
 }
 
@@ -167,13 +173,15 @@ int stack_push(stack_t* stk, void* p)
 
     if ((stk->size + 1) > stk->capacity)
     {
-        stk->data = resize(stk->data,
-                           stk->capacity*2,
-                           stk->capacity,
-                           stk->elem_size);
-        stk->capacity *= 2;
-        if (stk->data == NULL)
+        void* temp_p = resize(stk->data,
+                              stk->capacity*REALLOC_COEF,
+                              stk->capacity,
+                              stk->elem_size);
+        if (temp_p != NULL)
+            stk->data = temp_p;
+        else    
             return 1;
+        stk->capacity *= REALLOC_COEF;
     }
 
     memcpy((char*)stk->data +
@@ -195,16 +203,18 @@ int stack_pop(stack_t* stk, void* p)
           stk->elem_size);
     stk->size--;
 
-    if (stk->size <= stk->capacity/4 &&
-        stk->capacity >= 2*START_CAPACITY)
+    if (stk->size <= stk->capacity/REALLOC_COEF/REALLOC_COEF &&
+        stk->capacity >= REALLOC_COEF*stk->start_capacity)
     {
-        stk->data = resize(stk->data,
-                           stk->capacity/2,
-                           stk->capacity,
-                           stk->elem_size);
-        if (stk->data == NULL)
-            return 1;//TODO or not TODO ?
-        stk->capacity /= 2;
+        void* temp_p = resize(stk->data,
+                              stk->capacity/REALLOC_COEF,
+                              stk->capacity,
+                              stk->elem_size);
+        if (temp_p != NULL)
+            stk->data = temp_p;
+        else    
+            return 1;
+        stk->capacity /= REALLOC_COEF;
     }
 #ifndef NDEBUG
     set_hash(stk);
@@ -326,11 +336,11 @@ static void stack_assert(const struct stack_t* stk,
     case STR_HASH:
         fprintf_color(stderr, CONSOLE_TEXT_RED,
                       "ERROR: str_hash has wrong value\n");
-        break;
+        abort();
     case DATA_HASH:
         fprintf_color(stderr, CONSOLE_TEXT_RED,
                       "ERROR: data_hash has wrong value\n");
-        break;
+        abort();
     default:
         fprintf_color(stderr, CONSOLE_TEXT_RED, "UNDEFINED ERROR\n");
         abort();

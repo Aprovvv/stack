@@ -9,7 +9,7 @@
 
 struct stack_t;
 
-struct stack_t* stack_init(size_t elem_size);
+struct stack_t* stack_init(size_t elem_size, size_t start_capacity);
 
 int stack_push(stack_t* stk, void* x);
 int stack_pop(stack_t* stk, void* x);
