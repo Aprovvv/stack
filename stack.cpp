@@ -106,11 +106,6 @@ struct stack_t* stack_init(size_t elem_size, size_t start_capacity)
 
 int stack_destroy(stack_t* stk)
 {
-    STACK_ASSERT(stk);
-#ifndef NDEBUG
-    if (int err = stack_error(stk))
-        return err;
-#endif
     free((canary_t*)stk->data - 1);
     free(stk);
     return 0;
@@ -118,7 +113,6 @@ int stack_destroy(stack_t* stk)
 
 int stack_printf(stack_t* stk, int(*print_func)(const void*))
 {
-    fprintf(stderr, "%p", stk);
     fprintf(stderr, "\n-----------------------------------\n\n");
 #ifndef NDEBUG
     if (int err = stack_error(stk))
@@ -131,19 +125,19 @@ int stack_printf(stack_t* stk, int(*print_func)(const void*))
            (char*)stk->data + stk->capacity*stk->elem_size,
            sizeof(canary_t));
 
-    fprintf(stderr, "left_str_canary = %#llX\n", stk->left_str_protect);
-    fprintf(stderr, "right_str_canary = %#llX\n", stk->right_str_protect);
-    fprintf(stderr, "left_data_canary = %#llX\n", left_canary);
-    fprintf(stderr, "right_data_canary = %#llX\n", right_canary);
+    fprintf(stderr, "left_str_canary = %#lX\n", stk->left_str_protect);
+    fprintf(stderr, "right_str_canary = %#lX\n", stk->right_str_protect);
+    fprintf(stderr, "left_data_canary = %#lX\n", left_canary);
+    fprintf(stderr, "right_data_canary = %#lX\n", right_canary);
 
     fprintf(stderr, "str_hash = %#lX\n", stk->str_hash);
     fprintf(stderr, "data_hash = %#lX\n\n", stk->data_hash);
 #endif
 
-    fprintf(stderr, "size = %zd; &size = %p\n", stk->size, &(stk->size));
-    fprintf(stderr, "capasity = %zd; &capasity = %p\n",
+    fprintf(stderr, "size = %zu; &size = %p\n", stk->size, &(stk->size));
+    fprintf(stderr, "capasity = %zu; &capasity = %p\n",
             stk->capacity, &(stk->capacity));
-    fprintf(stderr, "elem_size = %zd, &elem_size = %p\n\n",
+    fprintf(stderr, "elem_size = %zu, &elem_size = %p\n\n",
             stk->elem_size, &stk->elem_size);
     fprintf(stderr, "data = %p, &data = %p\n", stk->data, &stk->data);
 
@@ -151,13 +145,13 @@ int stack_printf(stack_t* stk, int(*print_func)(const void*))
     {
         if (i < stk->size)
         {
-            fprintf(stderr, "*%zd = ", i);
+            fprintf(stderr, "*%zu = ", i);
             print_func((char*)stk->data + i*stk->elem_size);
             fprintf(stderr, "\n");
         }
         else
         {
-            fprintf(stderr, "%zd = ", i);
+            fprintf(stderr, "%zu = ", i);
             print_func((char*)stk->data + i*stk->elem_size);
             fprintf(stderr, "\n");
         }
@@ -179,7 +173,7 @@ int stack_push(stack_t* stk, void* p)
                               stk->elem_size);
         if (temp_p != NULL)
             stk->data = temp_p;
-        else    
+        else
             return 1;
         stk->capacity *= REALLOC_COEF;
     }
@@ -212,7 +206,7 @@ int stack_pop(stack_t* stk, void* p)
                               stk->elem_size);
         if (temp_p != NULL)
             stk->data = temp_p;
-        else    
+        else
             return 1;
         stk->capacity /= REALLOC_COEF;
     }
