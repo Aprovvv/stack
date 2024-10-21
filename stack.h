@@ -16,4 +16,6 @@ int stack_pop(stack_t* stk, void* x);
 int stack_destroy(stack_t* stk);
 int stack_printf(stack_t* stk, int(*print_func)(const void*));
 
+void stack_view(struct stack_t* stk, size_t n, void* dest);
+
 #endif

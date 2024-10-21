@@ -12,7 +12,7 @@ static int print_double(const void* ptr);
 
 int main()
 {
-    struct stack_t* my_stack = stack_init(sizeof(stack_elem_t), 4);
+    struct stack_t* my_stack = stack_init(sizeof(stack_elem_t), 0);
     if(NULL == my_stack)
     {
         fprintf_color(stderr, CONSOLE_TEXT_RED,

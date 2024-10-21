@@ -216,6 +216,11 @@ int stack_pop(stack_t* stk, void* p)
     return 0;
 }
 
+void stack_view(struct stack_t* stk, size_t n, void* dest)
+{
+    memcpy(dest, (char*)stk->data + n*stk->elem_size, stk->elem_size);
+}
+
 static void* resize(void* ptr,
              size_t new_capacity,
              size_t old_capacity,
