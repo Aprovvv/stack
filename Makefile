@@ -30,3 +30,6 @@ $(REXECUTABLE): $(ROBJECTS)
 
 release_object_files/%.o: %.cpp
 	$(CC) -c $(RFLAGS) $< -o $@
+
+release_object_files/%.o: color_print/%.cpp
+	$(CC) -c $(RFLAGS) $< -o $@

@@ -18,4 +18,7 @@ int stack_printf(stack_t* stk, int(*print_func)(const void*));
 
 void stack_view(struct stack_t* stk, size_t n, void* dest);
 
+void* stack_data (stack_t* stk);
+size_t stack_size (stack_t* stk);
+
 #endif
